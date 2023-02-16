@@ -9,9 +9,10 @@ import tempfile
 from collections import defaultdict, deque
 from collections.abc import Mapping
 from importlib import import_module
-from itertools import chain
+from itertools import chain, compress
 
 from pip._vendor import pkg_resources
+from pkg_resources import get_distribution
 
 from .version import version as __version__
 
@@ -453,6 +454,21 @@ class ReversedPackageDAG(PackageDAG):
         return PackageDAG(dict(m))
 
 
+def filters(line):
+    return compress(
+        (line[9:], line[39:]),
+        (line.startswith('License:'), line.startswith('Classifier: License')),
+    )
+
+
+def get_pkg_license(pkg):
+    distribution = get_distribution(pkg)
+    try:
+        lines = distribution.get_metadata_lines('METADATA')
+    except OSError:
+        lines = distribution.get_metadata_lines('PKG-INFO')
+    return tuple(chain.from_iterable(map(filters, lines)))
+
 def render_text(tree, list_all=True, frozen=False):
     """Print tree as text on console
 
@@ -544,6 +560,7 @@ def render_json_tree(tree, indent):
             for c in tree.get_children(node.key)
             if c.project_name not in cur_chain
         ]
+        d["licenses"] = get_pkg_license(node.project_name)
 
         return d
 
@@ -589,12 +606,14 @@ def dump_graphviz(tree, output_format="dot", is_reverse=False):
 
     if not is_reverse:
         for pkg, deps in tree.items():
-            pkg_label = f"{pkg.project_name}\\n{pkg.version}"
+            licenses = get_pkg_license(pkg.project_name)
+
+            pkg_label = f"{pkg.project_name}\\n{pkg.version}\\n{licenses}"
             graph.node(pkg.key, label=pkg_label)
             for dep in deps:
                 edge_label = dep.version_spec or "any"
                 if dep.is_missing:
-                    dep_label = f"{dep.project_name}\\n(missing)"
+                    dep_label = f"{dep.project_name}\\n(missing)\\n{licenses}"
                     graph.node(dep.key, label=dep_label, style="dashed")
                     graph.edge(pkg.key, dep.key, style="dashed")
                 else:
