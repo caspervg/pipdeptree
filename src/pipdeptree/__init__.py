@@ -178,7 +178,8 @@ class DistPackage(Package):
         return self.__class__(self._obj, req)
 
     def as_dict(self):
-        return {"key": self.key, "package_name": self.project_name, "installed_version": self.version}
+        return {"key": self.key, "package_name": self.project_name,
+                "installed_version": self.version}
 
 
 class ReqPackage(Package):
@@ -465,9 +466,10 @@ def get_pkg_license(pkg):
     distribution = get_distribution(pkg)
     try:
         lines = distribution.get_metadata_lines('METADATA')
-    except OSError:
+    except OSError | KeyError:
         lines = distribution.get_metadata_lines('PKG-INFO')
     return tuple(chain.from_iterable(map(filters, lines)))
+
 
 def render_text(tree, list_all=True, frozen=False):
     """Print tree as text on console
@@ -520,7 +522,8 @@ def render_json(tree, indent):
     """
     tree = tree.sort()
     return json.dumps(
-        [{"package": k.as_dict(), "dependencies": [v.as_dict() for v in vs]} for k, vs in tree.items()], indent=indent
+        [{"package": k.as_dict(), "dependencies": [v.as_dict() for v in vs]} for k, vs in
+         tree.items()], indent=indent
     )
 
 
@@ -580,7 +583,9 @@ def dump_graphviz(tree, output_format="dot", is_reverse=False):
     try:
         from graphviz import Digraph
     except ImportError:
-        print("graphviz is not available, but necessary for the output " "option. Please install it.", file=sys.stderr)
+        print(
+            "graphviz is not available, but necessary for the output " "option. Please install it.",
+            file=sys.stderr)
         sys.exit(1)
 
     try:
@@ -698,7 +703,8 @@ def cyclic_deps(tree):
     for p, rs in tree.items():
         for r in rs:
             if p.key in index.get(r.key, []):
-                p_as_dep_of_r = [x for x in tree.get(tree.get_node_as_parent(r.key)) if x.key == p.key][0]
+                p_as_dep_of_r = \
+                [x for x in tree.get(tree.get_node_as_parent(r.key)) if x.key == p.key][0]
                 cyclic.append((p, r, p_as_dep_of_r))
     return cyclic
 
@@ -716,7 +722,8 @@ def render_cycles_text(cycles):
 def get_parser():
     parser = argparse.ArgumentParser(description="Dependency tree of the installed python packages")
     parser.add_argument("-v", "--version", action="version", version=f"{__version__}")
-    parser.add_argument("-f", "--freeze", action="store_true", help="Print names so as to write freeze files")
+    parser.add_argument("-f", "--freeze", action="store_true",
+                        help="Print names so as to write freeze files")
     parser.add_argument(
         "--python",
         default=sys.executable,
@@ -729,7 +736,8 @@ def get_parser():
         action="store_true",
         help="If in a virtualenv that has global access " "do not show globally installed packages",
     )
-    parser.add_argument("-u", "--user-only", action="store_true", help="Only show installations in the user site dir")
+    parser.add_argument("-u", "--user-only", action="store_true",
+                        help="Only show installations in the user site dir")
     parser.add_argument(
         "-w",
         "--warn",
@@ -813,7 +821,8 @@ def handle_non_host_target(args):
     if of_python != os.path.abspath(sys.executable):
         # there's no way to guarantee that graphviz is available, so refuse
         if args.output_format:
-            print("graphviz functionality is not supported when querying" " non-host python", file=sys.stderr)
+            print("graphviz functionality is not supported when querying" " non-host python",
+                  file=sys.stderr)
             raise SystemExit(1)
         argv = sys.argv[1:]  # remove current python executable
         for py_at, value in enumerate(argv):
