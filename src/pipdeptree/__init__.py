@@ -466,7 +466,7 @@ def get_pkg_license(pkg):
     distribution = get_distribution(pkg)
     try:
         lines = distribution.get_metadata_lines('METADATA')
-    except OSError | KeyError:
+    except (OSError, KeyError) as e:
         lines = distribution.get_metadata_lines('PKG-INFO')
     return tuple(chain.from_iterable(map(filters, lines)))
 
